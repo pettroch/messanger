@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const ChatWindow = ({ selectedChat }) => {
   const [message, setMessage] = useState(""); // Состояние для нового сообщения
-  const [messages, setMessages] = useState([]); // Состояние для списка сообщений
+  const [messages, setMessages] = useState({}); // Состояние для списка сообщений (для каждого чата)
 
   // Функция для получения текущего времени в формате ЧЧ:ММ
   const getCurrentTime = () => {
@@ -16,10 +16,34 @@ const ChatWindow = ({ selectedChat }) => {
   const handleSendMessage = () => {
     if (message.trim() !== "") {
       const time = getCurrentTime(); // Получаем текущее время
-      setMessages([...messages, { text: message, sender: "me", time }]); // Добавляем новое сообщение с временем
+
+      setMessages((prevMessages) => {
+        const newMessages = { ...prevMessages };
+        const chatId = selectedChat.id; // Предположим, что у каждого чата есть уникальный id
+        if (!newMessages[chatId]) {
+          newMessages[chatId] = [];
+        }
+
+        // Добавляем новое сообщение только в случае, если оно еще не было отправлено
+        newMessages[chatId] = [
+          ...newMessages[chatId],
+          { text: message, sender: "me", time },
+        ];
+
+        return newMessages;
+      });
+
       setMessage(""); // Очищаем поле ввода
     }
   };
+
+  // Используем useEffect, чтобы загружать сообщения при изменении selectedChat
+  useEffect(() => {
+    if (selectedChat) {
+      // Когда выбран новый чат, очищаем поле ввода
+      setMessage("");
+    }
+  }, [selectedChat]);
 
   return (
     <div className="w-full bg-gray-50 p-6 shadow-xl rounded-r-3xl flex flex-col">
@@ -30,12 +54,13 @@ const ChatWindow = ({ selectedChat }) => {
           {/* Контейнер сообщений с возможностью прокрутки */}
           <div className="chat-box flex-grow overflow-y-auto mb-4 max-h-96">
             {/* Список сообщений */}
-            {messages.length === 0 ? (
+            {messages[selectedChat.id] &&
+            messages[selectedChat.id].length === 0 ? (
               <p className="text-gray-500">
                 Нет сообщений. Напишите что-нибудь...
               </p>
             ) : (
-              messages.map((msg, index) => (
+              messages[selectedChat.id]?.map((msg, index) => (
                 <div
                   key={index}
                   className={`message mb-2 ${
@@ -45,7 +70,7 @@ const ChatWindow = ({ selectedChat }) => {
                   <div
                     className={`message-text p-3 rounded-2xl text-sm max-w-xs break-words relative ${
                       msg.sender === "me"
-                        ? "bg-blue-500 text-white ml-auto message-me"
+                        ? "bg-blue-500 text-white ml-auto mr-5 message-me"
                         : "bg-gray-200 text-black message-other"
                     }`}
                   >
@@ -67,7 +92,7 @@ const ChatWindow = ({ selectedChat }) => {
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full p-3 rounded-2xl bg-gray-200 text-base  hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 pl-3 pr-12"
+              className="w-full p-3 rounded-2xl bg-gray-100 text-base focus:outline-none pl-3 pr-12"
               placeholder="Написать сообщение..."
             />
 
